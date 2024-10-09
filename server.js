@@ -1,38 +1,19 @@
-import express from 'express';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import dotenv from 'dotenv';
-import generateMusicHandler from './api/generate-music.js';
+const { createServer } = require('http')
+const { parse } = require('url')
+const next = require('next')
 
-dotenv.config();
+const dev = process.env.NODE_ENV !== 'production'
+const hostname = '0.0.0.0'
+const port = process.env.PORT || 3000
+const app = next({ dev, hostname, port })
+const handle = app.getRequestHandler()
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-app.use(express.json());
-
-// Serve static files from the Vite build output directory
-app.use(express.static(join(__dirname, 'dist')));
-
-// API route
-app.post('/api/generate-music', (req, res) => {
-  generateMusicHandler(req, res, process.env);
-});
-
-// Serve the index.html for any other routes
-app.get('*', (req, res) => {
-  res.sendFile(join(__dirname, 'dist', 'index.html'));
-});
-
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  next();
-});
-
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`Serving static files from: ${join(__dirname, 'dist')}`);
-});
+app.prepare().then(() => {
+  createServer((req, res) => {
+    const parsedUrl = parse(req.url, true)
+    handle(req, res, parsedUrl)
+  }).listen(port, hostname, (err) => {
+    if (err) throw err
+    console.log(`> Ready on http://${hostname}:${port}`)
+  })
+})
